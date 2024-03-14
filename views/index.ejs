@@ -123,14 +123,18 @@
             </tr>
         </thead>
         <tbody>
-            <% data.forEach(function(row) { %>
+            <% timeEntries.forEach(function(row) { %>
                 <tr>
                     <td><%= row.datum %></td>
                     <td><%= row.inklok_tijd %></td>
                     <td><%= row.uitklok_tijd || '' %></td>
                     <td><%= row.aantal_uren || '' %></td>
                     <td>
-                        <!-- Placeholder for project information -->
+                        <select name="project">
+                            <% projects.forEach(function(project) { %>
+                                <option value="<%= project.project_id %>"><%= project.project_name %></option>
+                            <% }); %>
+                        </select>
                     </td>
                 </tr>
             <% }); %>

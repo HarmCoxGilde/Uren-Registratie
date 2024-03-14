@@ -9,28 +9,37 @@ const database = require('./database'); // Ensure this points to your actual dat
 
 app.get('/', async (req, res) => {
     try {
-        let [rows] = await database.query('SELECT * FROM time_entries ORDER BY datum DESC, inklok_tijd DESC');
+        let [timeEntries] = await database.query(`
+            SELECT datum, inklok_tijd, uitklok_tijd,
+            CASE
+                WHEN uitklok_tijd IS NOT NULL THEN TIMEDIFF(uitklok_tijd, inklok_tijd)
+                ELSE NULL
+            END as aantal_uren
+            FROM time_entries ORDER BY datum DESC, inklok_tijd DESC
+        `);
 
-        // Correctly format datum as a string in YYYY-MM-DD format
-        rows = rows.map(row => {
+        // Also retrieve the project data
+        let [projects] = await database.query('SELECT project_id, project_name FROM project');
+
+        // Correctly format datum and potentially aantal_uren for timeEntries
+        timeEntries = timeEntries.map(entry => {
             let formattedDatum = '';
-            if (row.datum instanceof Date) {
-                // If datum is a Date object, format it to YYYY-MM-DD
-                formattedDatum = row.datum.toISOString().split('T')[0];
-            } else if (typeof row.datum === 'string') {
-                // If datum is already a string, assume it's in the correct format
-                formattedDatum = row.datum;
+            if (entry.datum instanceof Date) {
+                formattedDatum = entry.datum.toISOString().split('T')[0];
+            } else if (typeof entry.datum === 'string') {
+                formattedDatum = entry.datum;
             }
-            return { ...row, datum: formattedDatum };
+            
+            return { ...entry, datum: formattedDatum };
         });
 
-        res.render('index', { data: rows });
+        // Now pass both timeEntries and projects to the EJS template
+        res.render('index', { timeEntries, projects });
     } catch (err) {
         console.error(err);
         res.send('Error fetching data');
     }
 });
-
 
 app.post('/inklokken', async (req, res) => {
     const clientTime = new Date(req.body.clientTime);
