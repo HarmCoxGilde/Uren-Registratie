@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Your Page Title</title>
+</head>
+<style>
+    table {
+      border-collapse: collapse; /* Ensures borders between cells are collapsed into a single border */
+      margin: 15px; /* Adds space around the outside of the table */
+    }
+    
+    th, td {
+      padding: 15px;
+      text-align: center;
+      border-right: 1px solid black; /* Adds a right border to each cell */
+    }
+    
+    th:last-child, td:last-child {
+      border-right: none; /* Removes the right border for the last column */
+    }
+    
+    /* Continue with your color styling */
+    th:nth-child(odd), td:nth-child(odd) {
+      background-color: lightblue; /* For odd columns: light blue background */
+    }
+    
+    th:nth-child(even), td:nth-child(even) {
+      background-color: white; /* For even columns: white background */
+    }
+</style>    
+<body>
+    <button id="clockButton">Clock In</button>
+    <button id="resetButton">Reset Clock-In State</button>
+    <button id="resetEntriesButton">Reset All Entries</button>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const clockButton = document.getElementById('clockButton');
+            const resetButton = document.getElementById('resetButton');
+
+            resetButton.addEventListener('click', () => {
+            // This will clear the specific item
+            localStorage.removeItem('isClockedIn');
+
+            // Alternatively, to clear all local storage:
+            // localStorage.clear();
+
+            // Update the clockButton text if needed
+            setClockState(false);
+    });
+    const resetEntriesButton = document.getElementById('resetEntriesButton');
+
+    resetEntriesButton.addEventListener('click', () => {
+        if (confirm('Are you sure you want to reset all entries? This action cannot be undone.')) {
+            fetch('/resetEntries', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    alert('All entries have been reset.');
+                    refreshTable(); // Refresh the table to show that there are no entries
+                } else {
+                    alert('Operation failed: ' + data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    });
+
+            function setClockState(isClockedIn) {
+                localStorage.setItem('isClockedIn', isClockedIn);
+                clockButton.innerText = isClockedIn ? 'Clock Out' : 'Clock In';
+            }
+
+            function refreshTable() {
+                location.reload();
+            }
+
+            function handleClocking() {
+                const isClockedIn = localStorage.getItem('isClockedIn') === 'true';
+                const action = isClockedIn ? 'uitklokken' : 'inklokken';
+                const clientTime = new Date().toISOString(); // Capture client's current time
+
+                fetch(`/${action}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ clientTime })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.success) {
+                        setClockState(!isClockedIn);
+                        refreshTable(); // Refresh the table to show updated data
+                    } else {
+                        alert('Operation failed: ' + data.message);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+
+            const isClockedIn = localStorage.getItem('isClockedIn') === 'true';
+            setClockState(isClockedIn);
+
+            clockButton.addEventListener('click', handleClocking);
+        });
+    </script>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Datum</th>
+                <th>Inklok Tijd</th>
+                <th>Uitklok Tijd</th>
+                <th>Aantal Uren</th>
+                <th>Project</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% data.forEach(function(row) { %>
+                <tr>
+                    <td><%= row.datum %></td>
+                    <td><%= row.inklok_tijd %></td>
+                    <td><%= row.uitklok_tijd || '' %></td>
+                    <td><%= row.aantal_uren || '' %></td>
+                    <td>
+                        <!-- Placeholder for project information -->
+                    </td>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
+</body>
+</html>
